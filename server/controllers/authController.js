@@ -6,8 +6,8 @@ import ejs from 'ejs';
 
 const register = async (req, res, next) => {
   try {
-    let user = validate(registerSchema, req.body);
-    user = await User.create(user);
+    let value = validate(registerSchema, req.body);
+    const user = await User.create(value);
     const html = await ejs.renderFile('./views/emails/emailVerification.ejs', {
       user: user,
       url: process.env.CLIENT_URL
