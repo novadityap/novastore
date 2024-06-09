@@ -5,6 +5,21 @@ import sendMail from '../config/sendMail.js';
 import ejs from 'ejs';
 import jwt from 'jsonwebtoken';
 
+const emailVerification = async (req, res, next) => {
+  try {
+    const decoded = jwt.verify(req.params.token, process.env.VERIFY_TOKEN_SECRET)
+    const user = await User.findOne({ _id: decoded.id });
+
+    await user.updateOne({isVerified: true});
+
+    return res.status(200).json({
+      message: 'Email verified successfully'
+    });
+  } catch(err) {
+    next(err);
+  }
+}
+
 const register = async (req, res, next) => {
   try {
     const value = validate(registerSchema, req.body);
@@ -32,4 +47,7 @@ const register = async (req, res, next) => {
   } 
 }
 
-export {register};
+export {
+  emailVerification,
+  register
+};
