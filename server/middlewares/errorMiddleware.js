@@ -24,12 +24,12 @@ const errorMiddleware = (err, req, res, next) => {
     const errors = err.details.map(detail => (
       {[detail.context.label]: detail.message.replace(/"/g, '')}
     ))
+
     logger.error(err);
     res.status(400).json({
       errors: errors
     });
   } else {
-    console.log(err);
     logger.error(err);
     res.status(500).json({
       errors: 'Something went wrong',
