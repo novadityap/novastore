@@ -4,7 +4,6 @@ const httpLoggerMiddleware = (req, res, next) => {
   const httpRequest = {
     method: req.method,
     path: req.path,
-    body: req.body,
     query: req.query,
     ip: req.ip,
     headers: req.headers
