@@ -10,6 +10,8 @@ const app = express();
 
 dbConnect();
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(httpLoggerMiddleware);
 app.use('/api/auth', authRoute);
 app.use(errorMiddleware);
