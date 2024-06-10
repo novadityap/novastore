@@ -20,13 +20,23 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true
+    required: true,
+    select: false
   }, 
   isVerified: {
     type: Boolean,
     default: false
   }
-}, { timestamps: true });
+}, { timestamps: true, });
+
+userSchema.methods.toJSON = function () {
+  const user = this.toObject();
+  delete user.isVerified;
+  delete user.password;
+  delete user.createdAt;
+  delete user.updatedAt;
+  return user;
+}
 
 userSchema.pre('save', async function (next)  {
   if(!this.isModified('password')) return next();
