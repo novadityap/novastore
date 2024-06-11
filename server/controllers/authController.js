@@ -1,5 +1,6 @@
 import User from '../models/userModel.js';
 import RefreshToken from '../models/refreshTokenModel.js';
+import Blacklist from '../models/blacklistModel.js';
 import validate from '../validations/validate.js';
 import {registerSchema, loginSchema} from '../validations/authValidation.js';
 import sendMail from '../config/sendMail.js';
@@ -91,8 +92,28 @@ const login = async (req, res, next) => {
   }
 }
 
+const logout = async (req, res, next) => {
+  try {
+    const accessToken = req.cookies.accessToken;
+    const userId = req.user.id;
+
+    await RefreshToken.deleteMany({userId});
+    await Blacklist.create({token: accessToken});
+
+    return res.status(200)
+      .clearCookie('accessToken')
+      .clearCookie('refreshToken')
+      .json({
+        message: 'Logout successfully'
+      });
+  } catch(err) {
+    next(err);
+  }
+}
+
 export {
   emailVerification,
   register,
-  login
+  login,
+  logout
 };
