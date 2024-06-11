@@ -2,7 +2,7 @@ import User from '../models/userModel.js';
 import RefreshToken from '../models/refreshTokenModel.js';
 import Blacklist from '../models/blacklistModel.js';
 import validate from '../validations/validate.js';
-import {registerSchema, loginSchema} from '../validations/authValidation.js';
+import {forgotPasswordSchema, resetPasswordSchema, registerSchema, loginSchema} from '../validations/authValidation.js';
 import sendMail from '../config/sendMail.js';
 import ejs from 'ejs';
 import jwt from 'jsonwebtoken';
@@ -10,6 +10,61 @@ import bcrypt from 'bcrypt';
 import ResponseError from '../error/responseError.js';
 import crypto from 'crypto';
 import mongoose from 'mongoose';
+
+const forgotPassword = async (req, res, next) => {
+  try {
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = Date.now() + 60 * 60 * 1000;
+    const subject = 'Reset Password';
+    const value = validate(forgotPasswordSchema, req.body);
+    
+    const user = await User.findOne({email: value.email});
+    if(!user) throw new ResponseError(404, 'The email you entered is incorrect');
+
+    user.resetPasswordToken = token;
+    user.resetPasswordTokenExpires = expires;
+    await user.save();
+    
+    const html = await ejs.renderFile('./views/emails/forgotPassword.ejs', {
+      user: user,
+      url: process.env.CLIENT_URL
+    });
+
+    await sendMail(user.email, subject, html);
+    
+    return res.status(200).json({
+      message: 'Please check your email to reset your password'
+    });
+  } catch(err) {
+    next(err);
+  }
+}
+
+const resetPassword = async (req, res, next) => {
+  try {
+    const resetPasswordToken = req.params.token;
+    if(!resetPasswordToken) throw new ResponseError(401, 'Password reset token is invalid or has expired');
+    
+    const user = await User.findOne({resetPasswordToken})
+    if(!user) throw new ResponseError(401, 'Password reset token is invalid or has expired');
+    
+    const isExpired = Date.now() > user.resetPasswordTokenExpires
+    if(isExpired) throw new ResponseError(401, 'Password reset token is invalid or has expired');
+
+    const {confirmPassword} = validate(resetPasswordSchema, req.body);
+    
+    user.password = confirmPassword;
+    user.resetPasswordToken = null;
+    user.resetPasswordTokenExpires = null;
+    await user.save();
+    
+    return res.status(200).json({
+      message: 'Password reset successfully'
+    });
+  } catch(err) {
+    next(err);
+  }
+}
 
 const emailVerification = async (req, res, next) => {
   try {
@@ -131,6 +186,8 @@ const logout = async (req, res, next) => {
 }
 
 export {
+  forgotPassword,
+  resetPassword,
   emailVerification,
   register,
   login,

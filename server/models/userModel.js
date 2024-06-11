@@ -32,6 +32,12 @@ const userSchema = new mongoose.Schema({
   },
   verificationTokenExpires: {
     type: Date,
+  },
+  resetPasswordToken: {
+    type: String,
+  },
+  resetPasswordTokenExpires: {
+    type: Date,
   }
 }, { timestamps: true, });
 
@@ -40,6 +46,9 @@ userSchema.methods.toJSON = function () {
   delete user.password;
   delete user.isVerified;
   delete user.verificationToken;
+  delete user.verificationTokenExpires;
+  delete user.resetPasswordToken;
+  delete user.resetPasswordTokenExpires;
   delete user.createdAt;
   delete user.updatedAt;
   return user;
