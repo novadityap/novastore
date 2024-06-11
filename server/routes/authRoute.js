@@ -4,7 +4,7 @@ import authenticateTokenMiddleware from '../middlewares/authenticateTokenMiddlew
 
 const router = express.Router();
 
-router.get('/verify/:token', emailVerification);
+router.get('/:id/email-verification/:token', emailVerification);
 router.post('/register', register);
 router.post('/login', login);
 router.post('/logout', authenticateTokenMiddleware, logout);

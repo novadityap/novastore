@@ -7,6 +7,6 @@
   <h1>Email Verification</h1>
   <p>Hi <%= user.firstname %>,</p>
   <p>Thank you for registering. Please click the link below to verify your email address:</p>
-  <a href="<%= `${url}/verify/${token}` %>">Verify Email</a>
+  <a href="<%= `${url}/${user._id}/verify/${user.verificationToken}` %>">Verify Email</a>
 </body>
 </html>
