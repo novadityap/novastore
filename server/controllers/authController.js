@@ -8,13 +8,28 @@ import ejs from 'ejs';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import ResponseError from '../error/responseError.js';
+import crypto from 'crypto';
+import mongoose from 'mongoose';
 
 const emailVerification = async (req, res, next) => {
   try {
-    const decoded = jwt.verify(req.params.token, process.env.VERIFY_TOKEN_SECRET)
-    const user = await User.findOne({ _id: decoded.id });
+    const verificationToken = req.params.token;
+    if(!verificationToken) throw new ResponseError(401, 'Invalid verification token');
+    
+    const userId = req.params.id;
+    if(!mongoose.isValidObjectId(userId)) throw new ResponseError(400, 'Invalid user ID');
 
-    await user.updateOne({isVerified: true});
+    const user = await User.findById(userId);
+    if(!user) throw new ResponseError(404, 'User not found');
+
+    if(verificationToken !== user.verificationToken) throw new ResponseError(401, 'Invalid verification token');
+
+    if(Date.now() > user.verificationTokenExpires) throw new ResponseError(401, 'Verification token expired');
+
+    user.isVerified = true;
+    user.verificationToken = null;
+    user.verificationTokenExpires = null;
+    await user.save();
 
     return res.status(200).json({
       message: 'Email verified successfully'
@@ -26,21 +41,25 @@ const emailVerification = async (req, res, next) => {
 
 const register = async (req, res, next) => {
   try {
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = Date.now() + 24 * 60 * 60 * 1000;
+    const subject = 'Email Verification';
     const value = validate(registerSchema, req.body);
     const userExists = await User.findOne({ email: value.email });
-    
+
     if(!userExists) {
-      const user = await User.create(value);
-      const verificationToken = jwt.sign({id: user._id}, process.env.VERIFY_TOKEN_SECRET, {
-        expiresIn: '1d'
+      const user = await User.create({
+        ...value,
+        verificationToken: token,
+        verificationTokenExpires: expires
       });
+
       const html = await ejs.renderFile('./views/emails/emailVerification.ejs', {
         user: user,
-        token: verificationToken,
         url: process.env.CLIENT_URL
       });
 
-      await sendMail(user.email, html);
+      await sendMail(user.email, subject, html);
     }
 
     return res.status(200).json({

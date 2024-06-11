@@ -26,13 +26,20 @@ const userSchema = new mongoose.Schema({
   isVerified: {
     type: Boolean,
     default: false
+  },
+  verificationToken: {
+    type: String,
+  },
+  verificationTokenExpires: {
+    type: Date,
   }
 }, { timestamps: true, });
 
 userSchema.methods.toJSON = function () {
   const user = this.toObject();
-  delete user.isVerified;
   delete user.password;
+  delete user.isVerified;
+  delete user.verificationToken;
   delete user.createdAt;
   delete user.updatedAt;
   return user;

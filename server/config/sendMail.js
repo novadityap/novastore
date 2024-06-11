@@ -10,11 +10,12 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-const sendMail = async (email, html) => {
+const sendMail = async (email, subject, html) => {
   try {
     await transporter.sendMail({
       from: 'admin@novastore',
       to: email,
+      subject: subject,
       html: html,
     });
   } catch(err) {
