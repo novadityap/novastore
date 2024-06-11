@@ -15,7 +15,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(httpLoggerMiddleware);
+
 app.use('/api/auth', authRoute);
+
 app.use(errorMiddleware);
 
 app.listen(3000, () => {
