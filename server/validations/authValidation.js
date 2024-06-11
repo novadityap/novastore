@@ -6,7 +6,10 @@ const forgotPasswordSchema = joi.object({
 
 const resetPasswordSchema = joi.object({
   password: joi.string().required(),
-  confirmPassword: joi.string().required().valid(joi.ref('password'))
+  confirmPassword: joi.any().equal(joi.ref('password'))
+  .required()
+  .label('Confirm password')
+  .messages({ 'any.only': '{{#label}} does not match' })
 });
 
 const registerSchema = joi.object({
