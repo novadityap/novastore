@@ -69,17 +69,15 @@ const resetPassword = async (req, res, next) => {
 const emailVerification = async (req, res, next) => {
   try {
     const verificationToken = req.params.token;
-    if(!verificationToken) throw new ResponseError(401, 'Invalid verification token');
+    if(!verificationToken) throw new ResponseError(401, 'Verification token is invalid or has expired');
     
-    const userId = req.params.id;
-    if(!mongoose.isValidObjectId(userId)) throw new ResponseError(400, 'Invalid user ID');
-
-    const user = await User.findById(userId);
+    const user = await User.findOne({verificationToken});
     if(!user) throw new ResponseError(404, 'User not found');
 
-    if(verificationToken !== user.verificationToken) throw new ResponseError(401, 'Invalid verification token');
+    if(verificationToken !== user.verificationToken) throw new ResponseError(401, 'Verification token is invalid');
 
-    if(Date.now() > user.verificationTokenExpires) throw new ResponseError(401, 'Verification token expired');
+    const isExpired = Date.now() > user.verificationTokenExpires
+    if(isExpired) throw new ResponseError(401, 'Verification token expired');
 
     user.isVerified = true;
     user.verificationToken = null;
@@ -100,10 +98,10 @@ const register = async (req, res, next) => {
     const expires = Date.now() + 24 * 60 * 60 * 1000;
     const subject = 'Email Verification';
     const value = validate(registerSchema, req.body);
-    const userExists = await User.findOne({ email: value.email });
+    const user = await User.findOne({ email: value.email });
 
-    if(!userExists) {
-      const user = await User.create({
+    if(!user) {
+      user = await User.create({
         ...value,
         verificationToken: token,
         verificationTokenExpires: expires
