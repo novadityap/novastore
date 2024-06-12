@@ -9,7 +9,6 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import ResponseError from '../error/responseError.js';
 import crypto from 'crypto';
-import mongoose from 'mongoose';
 
 const forgotPassword = async (req, res, next) => {
   try {
@@ -103,6 +102,7 @@ const register = async (req, res, next) => {
     const user = await User.findOne({ email: value.email });
 
     if(!user) {
+      value.password = await bcrypt.hash(value.password, 10);
       user = await User.create({
         ...value,
         verificationToken: token,
@@ -135,17 +135,17 @@ const login = async (req, res, next) => {
     const isPasswordValid = await bcrypt.compare(value.password, user.password);
     if(!isPasswordValid) throw new ResponseError(400, 'Invalid credentials');
 
-    const accessToken = jwt.sign({id: user._id}, process.env.ACCESS_TOKEN_SECRET, {
+    const accessToken = jwt.sign({userId: user._id}, process.env.ACCESS_TOKEN_SECRET, {
       expiresIn: '15m'
     });
-    const refreshToken = jwt.sign({id: user._id}, process.env.REFRESH_TOKEN_SECRET, {
+    const refreshToken = jwt.sign({UserId: user._id}, process.env.REFRESH_TOKEN_SECRET, {
       expiresIn: '1d'
     });
 
     await RefreshToken.create({
       token: refreshToken,
       expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      userId: user._id
+      user: user._id
     });
 
     return res.status(200)
@@ -159,6 +159,7 @@ const login = async (req, res, next) => {
       })
       .json({
         data: user,
+        accessToken: accessToken,
         message: 'Login successfully'
       });
   } catch(err) {
@@ -169,9 +170,8 @@ const login = async (req, res, next) => {
 const logout = async (req, res, next) => {
   try {
     const accessToken = req.cookies.accessToken;
-    const userId = req.user.id;
 
-    await RefreshToken.deleteMany({userId});
+    await RefreshToken.deleteMany({user: req.user.userId});
     await Blacklist.create({token: accessToken});
 
     return res.status(200)
