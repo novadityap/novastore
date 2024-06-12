@@ -4,9 +4,10 @@ import dbConnect from './config/dbConnect.js';
 import errorMiddleware from './middlewares/errorMiddleware.js';
 import httpLoggerMiddleware from './middlewares/httpLoggerMiddleware.js';
 import authMiddleware from './middlewares/authMiddleware.js';
+import cookieParser from 'cookie-parser';
 import authRoute from './routes/authRoute.js';
 import userRoute from './routes/userRoute.js';
-import cookieParser from 'cookie-parser';
+import productCategoryRoute from './routes/productCategoryRoute.js';
 
 const PORT = process.env.PORT || 3000;
 const app = express();
@@ -22,6 +23,7 @@ app.use('/api/auth', authRoute);
 
 app.use(authMiddleware);
 app.use('/api/users', userRoute);
+app.use('/api/product-categories', productCategoryRoute);
 
 
 app.use(errorMiddleware);
