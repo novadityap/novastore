@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password/:token', resetPassword);
-router.get('/:id/email-verification/:token', emailVerification);
+router.get('/email-verification/:token', emailVerification);
 router.post('/register', register);
 router.post('/login', login);
 router.post('/logout', authenticateTokenMiddleware, logout);
