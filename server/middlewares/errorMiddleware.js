@@ -3,22 +3,21 @@ import joi from 'joi';
 import logger from '../config/logger.js';
 import jwt from 'jsonwebtoken';
 
-
 const errorMiddleware = (err, req, res, next) => {
   if(err instanceof ResponseError) {
     logger.error(err);
     res.status(err.status).json({
-      errors: err.message
+      error: err.message
     });
   } else if(err instanceof jwt.JsonWebTokenError) {
     logger.error(err);
     res.status(401).json({
-      errors: 'Invalid token'
+      error: 'Invalid token'
     })
   } else if(err instanceof jwt.TokenExpiredError) {
     logger.error(err);
     res.status(401).json({
-      errors: 'Token expired'
+      error: 'Token expired'
     })
   } else if(err instanceof joi.ValidationError) {
     const errors = err.details.map(detail => (
@@ -32,7 +31,7 @@ const errorMiddleware = (err, req, res, next) => {
   } else {
     logger.error(err);
     res.status(500).json({
-      errors: 'Something went wrong',
+      error: 'Internal server error',
     });
   }
 }

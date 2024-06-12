@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import bcrypt from 'bcrypt';
 
 const userSchema = new mongoose.Schema({
   firstname: {
@@ -23,6 +22,28 @@ const userSchema = new mongoose.Schema({
     required: true,
     select: false
   }, 
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user'
+  },
+  address: {
+    type: String,
+  },
+  cart: {
+      type: Array,
+      default: []
+  },
+  wishlist: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Product'
+    }
+  ],
+  isBlocked: {
+    type: Boolean,
+    default: false
+  },
   isVerified: {
     type: Boolean,
     default: false
@@ -39,12 +60,13 @@ const userSchema = new mongoose.Schema({
   resetPasswordTokenExpires: {
     type: Date,
   }
-}, { timestamps: true, });
+}, { 
+  timestamps: true, 
+});
 
 userSchema.methods.toJSON = function () {
   const user = this.toObject();
   delete user.password;
-  delete user.isVerified;
   delete user.verificationToken;
   delete user.verificationTokenExpires;
   delete user.resetPasswordToken;
@@ -53,17 +75,6 @@ userSchema.methods.toJSON = function () {
   delete user.updatedAt;
   return user;
 }
-
-userSchema.pre('save', async function (next)  {
-  if(!this.isModified('password')) return next();
-
-  try {
-    this.password = await bcrypt.hash(this.password, 10);
-    next();
-  } catch(err) {
-    next(err);
-  }
-})
 
 const User = mongoose.model('User', userSchema);
 

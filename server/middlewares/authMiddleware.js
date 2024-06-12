@@ -2,13 +2,13 @@ import jwt from 'jsonwebtoken';
 import ResponseError from '../error/responseError.js';
 import Blacklist from '../models/blacklistModel.js';
 
-const authenticateTokenMiddleware = async (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   try {
     const accessToken = req.cookies.accessToken;
-    if(!accessToken) throw new ResponseError(401, 'Unauthorized');
+    if(!accessToken) throw new ResponseError(401, 'Unauthorized access');
 
-    const storedAccessToken = await Blacklist.findOne({token: accessToken});
-    if(storedAccessToken) throw new ResponseError(401, 'Unauthorized');
+    const blacklistedToken = await Blacklist.findOne({token: accessToken});
+    if(blacklistedToken) throw new ResponseError(401, 'Unauthorized access');
 
     const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
     req.user = decoded;
@@ -19,4 +19,4 @@ const authenticateTokenMiddleware = async (req, res, next) => {
   }
 }
 
-export default authenticateTokenMiddleware;
+export default authMiddleware;
