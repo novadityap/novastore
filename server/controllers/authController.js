@@ -47,9 +47,11 @@ const resetPassword = async (req, res, next) => {
     
     const user = await User.findOne({resetPasswordToken})
     if(!user) throw new ResponseError(401, 'Password reset token is invalid or has expired');
+
+    if(resetPasswordToken !== user.resetPasswordToken) throw new ResponseError(401, 'Password reset token is invalid');
     
     const isExpired = Date.now() > user.resetPasswordTokenExpires
-    if(isExpired) throw new ResponseError(401, 'Password reset token is invalid or has expired');
+    if(isExpired) throw new ResponseError(401, 'Password reset token expired');
 
     const {confirmPassword} = validate(resetPasswordSchema, req.body);
     
