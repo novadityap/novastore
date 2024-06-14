@@ -6,6 +6,15 @@ import jwt from 'jsonwebtoken';
 const errorMiddleware = (err, req, res, next) => {
   if(err instanceof ResponseError) {
     logger.error(err);
+
+    if(err.message === 'Image is required') {
+      const errors = {
+        images: 'Image is required'
+      };
+
+      res.status(400).json({errors})
+    }
+    
     res.status(err.status).json({
       error: err.message
     });
