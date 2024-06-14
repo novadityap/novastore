@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import authRoute from './routes/authRoute.js';
 import userRoute from './routes/userRoute.js';
 import productCategoryRoute from './routes/productCategoryRoute.js';
+import productRoute from './routes/productRoute.js';
 import brandRoute from './routes/brandRoute.js';
 import colorRoute from './routes/colorRoute.js';
 import couponRoute from './routes/couponRoute.js';
@@ -16,6 +17,7 @@ const app = express();
 
 dbConnect();
 
+app.use(express.static('public'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -24,6 +26,7 @@ app.use(httpLoggerMiddleware);
 app.use('/api/auth', authRoute);
 app.use('/api/users', userRoute);
 app.use('/api/product-categories', productCategoryRoute);
+app.use('/api/products', productRoute);
 app.use('/api/brands', brandRoute);
 app.use('/api/colors', colorRoute);
 app.use('/api/coupons', couponRoute);
