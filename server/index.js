@@ -4,6 +4,7 @@ import dbConnect from './config/dbConnect.js';
 import errorMiddleware from './middlewares/errorMiddleware.js';
 import httpLoggerMiddleware from './middlewares/httpLoggerMiddleware.js';
 import cookieParser from 'cookie-parser';
+import cors from 'cors';
 import authRoute from './routes/authRoute.js';
 import userRoute from './routes/userRoute.js';
 import productCategoryRoute from './routes/productCategoryRoute.js';
@@ -17,6 +18,7 @@ const app = express();
 
 dbConnect();
 
+app.use(cors());
 app.use(express.static('public'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
