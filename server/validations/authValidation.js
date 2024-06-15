@@ -5,7 +5,7 @@ const forgotPasswordSchema = joi.object({
 });
 
 const resetPasswordSchema = joi.object({
-  password: joi.string().required(),
+  password: joi.string().min(3).required(),
   confirmPassword: joi.any().equal(joi.ref('password'))
   .required()
   .label('Confirm password')
@@ -17,12 +17,12 @@ const registerSchema = joi.object({
   lastname: joi.string().required(),
   email: joi.string().email().required(),
   mobile: joi.string().required(),
-  password: joi.string().required()
+  password: joi.string().min(3).required()
 });
 
 const loginSchema = joi.object({
   email: joi.string().email().required(),
-  password: joi.string().required()
+  password: joi.string().min(3).required()
 });
 
 export {forgotPasswordSchema, resetPasswordSchema, registerSchema, loginSchema};
