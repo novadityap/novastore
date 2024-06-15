@@ -8,9 +8,7 @@ import slugify from 'slugify';
 
 const createProduct = async (req, res, next) => {
   try {
-    const value = validate(productSchema, req.body);
-
-    if(!req.files.length) throw new ResponseError(400, 'Image is required');
+    const value = validate(productSchema, req.body, req.files);
 
     const images = req.files.map((file) => file.path);
     value.images = images;
