@@ -2,7 +2,13 @@ import User from '../models/userModel.js';
 import RefreshToken from '../models/refreshTokenModel.js';
 import Blacklist from '../models/blacklistModel.js';
 import validate from '../validations/validate.js';
-import {forgotPasswordSchema, resetPasswordSchema, registerSchema, loginSchema} from '../validations/authValidation.js';
+import {
+  forgotPasswordSchema, 
+  resetPasswordSchema, 
+  resendEmailVerificationSchema,
+  registerSchema, 
+  loginSchema
+} from '../validations/authValidation.js';
 import sendMail from '../config/sendMail.js';
 import ejs from 'ejs';
 import jwt from 'jsonwebtoken';
@@ -70,10 +76,9 @@ const resetPassword = async (req, res, next) => {
 const emailVerification = async (req, res, next) => {
   try {
     const verificationToken = req.params.token;
-    if(!verificationToken) throw new ResponseError(401, 'Verification token is invalid or has expired');
     
     const user = await User.findOne({verificationToken});
-    if(!user) throw new ResponseError(404, 'User not found');
+    if(!user) throw new ResponseError(401, 'Verification token is invalid or has expired');
 
     if(verificationToken !== user.verificationToken) throw new ResponseError(401, 'Verification token is invalid');
 
@@ -86,7 +91,37 @@ const emailVerification = async (req, res, next) => {
     await user.save();
 
     return res.status(200).json({
-      message: 'Email verified successfully'
+      message: 'Your email has been verified successfully, you can now login'
+    });
+  } catch(err) {
+    next(err);
+  }
+}
+
+const resendEmailVerification = async (req, res, next) => {
+  try {
+    const value = validate(resendEmailVerificationSchema, req.body);
+
+    const user = await User.findOne({email: value.email});
+    if(!user) throw new ResponseError(404, 'Your email is not registered');
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = Date.now() + 24 * 60 * 60 * 1000;
+    const subject = 'Email Verification';
+
+    user.verificationToken = token;
+    user.verificationTokenExpires = expires;
+    await user.save();
+
+    const html = await ejs.renderFile('./views/emails/emailVerification.ejs', {
+      user: user,
+      url: process.env.CLIENT_URL
+    });
+
+    await sendMail(user.email, subject, html);
+    
+    return res.status(200).json({
+      message: 'Please check your email to verify your account'
     });
   } catch(err) {
     next(err);
@@ -99,7 +134,7 @@ const register = async (req, res, next) => {
     const expires = Date.now() + 24 * 60 * 60 * 1000;
     const subject = 'Email Verification';
     const value = validate(registerSchema, req.body);
-    const user = await User.findOne({ email: value.email });
+    let user = await User.findOne({ email: value.email });
 
     if(!user) {
       value.password = await bcrypt.hash(value.password, 10);
@@ -189,6 +224,7 @@ export {
   forgotPassword,
   resetPassword,
   emailVerification,
+  resendEmailVerification,
   register,
   login,
   logout
