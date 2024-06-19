@@ -7,13 +7,12 @@ const userSchema = new mongoose.Schema({
   }, 
   lastname: {
     type: String,
-    required: true
   },
   email: {
     type: String,
     required: true
   },
-  mobile: {
+  phone: {
     type: String,
     required: true
   },
@@ -29,6 +28,7 @@ const userSchema = new mongoose.Schema({
   },
   address: {
     type: String,
+    required: true
   },
   cart: {
       type: Array,
