@@ -22,9 +22,9 @@ const errorMiddleware = (err, req, res, next) => {
       error = JSON.parse(err.message);
     } catch(e) {
       if(err.message === 'Invalid credentials') {
-        error = {
-          credentials: err.message
-        };
+        error = [
+          {credentials: err.message}
+        ];
       } 
     }
 
