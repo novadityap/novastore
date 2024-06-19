@@ -12,12 +12,16 @@ const resetPasswordSchema = joi.object({
   .messages({ 'any.only': '{{#label}} does not match' })
 });
 
+const resendEmailVerificationSchema = joi.object({
+  email: joi.string().email().required()
+});
+
 const registerSchema = joi.object({
   firstname: joi.string().required(),
-  lastname: joi.string().required(),
   email: joi.string().email().required(),
-  mobile: joi.string().required(),
-  password: joi.string().min(3).required()
+  phone: joi.string().required(),
+  password: joi.string().min(3).required(),
+  address: joi.string().required()
 });
 
 const loginSchema = joi.object({
@@ -25,4 +29,10 @@ const loginSchema = joi.object({
   password: joi.string().min(3).required()
 });
 
-export {forgotPasswordSchema, resetPasswordSchema, registerSchema, loginSchema};
+export {
+  resendEmailVerificationSchema,
+  forgotPasswordSchema, 
+  resetPasswordSchema, 
+  registerSchema, 
+  loginSchema
+};
