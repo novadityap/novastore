@@ -1,5 +1,4 @@
 import User from '../models/userModel.js';
-import RefreshToken from '../models/refreshTokenModel.js';
 import Blacklist from '../models/blacklistModel.js';
 import validate from '../validations/validate.js';
 import {
@@ -9,6 +8,8 @@ import {
   registerSchema, 
   loginSchema
 } from '../validations/authValidation.js';
+import generateAccessToken from '../utils/generateAccessToken.js';
+import generateRefreshToken from '../utils/generateRefreshToken.js';
 import sendMail from '../config/sendMail.js';
 import ejs from 'ejs';
 import jwt from 'jsonwebtoken';
@@ -16,28 +17,53 @@ import bcrypt from 'bcrypt';
 import ResponseError from '../error/responseError.js';
 import crypto from 'crypto';
 
+const refreshToken = async (req, res, next) => {
+  try {
+    const {refreshToken} = req.cookies;
+    
+    const user = await User.findOne({refreshToken});
+    if(!user) throw new ResponseError(401, 'Unauthorized access, token not provided');
+    
+    const accessToken = generateAccessToken(user._id);
+
+    res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        maxAge: 15 * 1000
+    });
+     
+    res.sendStatus(200);
+  } catch(err) {
+    next(err);
+  }
+}
+
 const forgotPassword = async (req, res, next) => {
   try {
-    const token = crypto.randomBytes(32).toString('hex');
-    const expires = Date.now() + 60 * 60 * 1000;
-    const subject = 'Reset Password';
     const value = validate(forgotPasswordSchema, req.body);
     
-    const user = await User.findOne({email: value.email});
-    if(!user) throw new ResponseError(404, 'The email you entered is incorrect');
+    const user = await User.findOneAndUpdate(
+      {email: value.email},
+      {
+        resetPasswordToken: crypto.randomBytes(32).toString('hex'),
+        resetPasswordTokenExpires: Date.now() + 60 * 60 * 1000
+      },
+      {new: true}
+    );
 
-    user.resetPasswordToken = token;
-    user.resetPasswordTokenExpires = expires;
-    await user.save();
-    
+    if(!user) {
+      return res.status(200).json({
+        message: 'Please check your email to reset your password'
+      });
+    };
+
     const html = await ejs.renderFile('./views/emails/forgotPassword.ejs', {
       user: user,
       url: process.env.CLIENT_URL
     });
 
-    await sendMail(user.email, subject, html);
+    await sendMail(user.email, 'Reset Password', html);
     
-    return res.status(200).json({
+    res.status(200).json({
       message: 'Please check your email to reset your password'
     });
   } catch(err) {
@@ -47,25 +73,25 @@ const forgotPassword = async (req, res, next) => {
 
 const resetPassword = async (req, res, next) => {
   try {
-    const resetPasswordToken = req.params.token;
-    if(!resetPasswordToken) throw new ResponseError(401, 'Password reset token is invalid or has expired');
-    
-    const user = await User.findOne({resetPasswordToken})
-    if(!user) throw new ResponseError(401, 'Password reset token is invalid or has expired');
-
-    if(resetPasswordToken !== user.resetPasswordToken) throw new ResponseError(401, 'Password reset token is invalid');
-    
-    const isExpired = Date.now() > user.resetPasswordTokenExpires
-    if(isExpired) throw new ResponseError(401, 'Password reset token expired');
-
+    const {token} = req.params;
     const {confirmPassword} = validate(resetPasswordSchema, req.body);
+
+    const user = await User.findOneAndUpdate(
+      {
+        resetPasswordToken: token,
+        resetPasswordTokenExpires: {$gt: Date.now()}
+      },
+      {
+        password: await bcrypt.hash(confirmPassword, 10),
+        resetPasswordToken: null,
+        resetPasswordTokenExpires: null
+      },
+      {new: true}
+    );
+
+    if(!user) throw new ResponseError(401, 'Password reset token is invalid or has expired');
     
-    user.password = confirmPassword;
-    user.resetPasswordToken = null;
-    user.resetPasswordTokenExpires = null;
-    await user.save();
-    
-    return res.status(200).json({
+    res.status(200).json({
       message: 'Password reset successfully'
     });
   } catch(err) {
@@ -75,22 +101,24 @@ const resetPassword = async (req, res, next) => {
 
 const emailVerification = async (req, res, next) => {
   try {
-    const verificationToken = req.params.token;
-    
-    const user = await User.findOne({verificationToken});
+    const {token} = req.params;
+
+    const user = await User.findOneAndUpdate(
+      { 
+        verificationToken: token, 
+        verificationTokenExpires: {$gt: Date.now()} 
+      },
+      {
+        verificationToken: null,
+        verificationTokenExpires: null,
+        isVerified: true
+      },
+      {new: true}
+    );
+
     if(!user) throw new ResponseError(401, 'Verification token is invalid or has expired');
 
-    if(verificationToken !== user.verificationToken) throw new ResponseError(401, 'Verification token is invalid');
-
-    const isExpired = Date.now() > user.verificationTokenExpires
-    if(isExpired) throw new ResponseError(401, 'Verification token expired');
-
-    user.isVerified = true;
-    user.verificationToken = null;
-    user.verificationTokenExpires = null;
-    await user.save();
-
-    return res.status(200).json({
+    res.status(200).json({
       message: 'Your email has been verified successfully, you can now login'
     });
   } catch(err) {
@@ -105,12 +133,8 @@ const resendEmailVerification = async (req, res, next) => {
     const user = await User.findOne({email: value.email});
     if(!user) throw new ResponseError(404, 'Your email is not registered');
 
-    const token = crypto.randomBytes(32).toString('hex');
-    const expires = Date.now() + 24 * 60 * 60 * 1000;
-    const subject = 'Email Verification';
-
-    user.verificationToken = token;
-    user.verificationTokenExpires = expires;
+    user.verificationToken = crypto.randomBytes(32).toString('hex');
+    user.verificationTokenExpires = Date.now() + 24 * 60 * 60 * 1000;
     await user.save();
 
     const html = await ejs.renderFile('./views/emails/emailVerification.ejs', {
@@ -118,9 +142,9 @@ const resendEmailVerification = async (req, res, next) => {
       url: process.env.CLIENT_URL
     });
 
-    await sendMail(user.email, subject, html);
+    await sendMail(user.email, 'Email Verification', html);
     
-    return res.status(200).json({
+    res.status(200).json({
       message: 'Please check your email to verify your account'
     });
   } catch(err) {
@@ -130,9 +154,6 @@ const resendEmailVerification = async (req, res, next) => {
 
 const register = async (req, res, next) => {
   try {
-    const token = crypto.randomBytes(32).toString('hex');
-    const expires = Date.now() + 24 * 60 * 60 * 1000;
-    const subject = 'Email Verification';
     const value = validate(registerSchema, req.body);
     let user = await User.findOne({ email: value.email });
 
@@ -140,8 +161,8 @@ const register = async (req, res, next) => {
       value.password = await bcrypt.hash(value.password, 10);
       user = await User.create({
         ...value,
-        verificationToken: token,
-        verificationTokenExpires: expires
+        verificationToken: crypto.randomBytes(32).toString('hex'),
+        verificationTokenExpires: Date.now() + 24 * 60 * 60 * 1000
       });
 
       const html = await ejs.renderFile('./views/emails/emailVerification.ejs', {
@@ -149,10 +170,10 @@ const register = async (req, res, next) => {
         url: process.env.CLIENT_URL
       });
 
-      await sendMail(user.email, subject, html);
+      await sendMail(user.email, 'Email Verification', html);
     }
 
-    return res.status(200).json({
+    res.status(200).json({
       message: 'Please check your email to verify your account'
     });
   } catch(err) {
@@ -163,30 +184,20 @@ const register = async (req, res, next) => {
 const login = async (req, res, next) => {
   try {
     const value = validate(loginSchema, req.body);
-
     const user = await User.findOne({ email: value.email }).select('+password');
-    if(!user) throw new ResponseError(400, 'Invalid credentials');
 
-    const isPasswordValid = await bcrypt.compare(value.password, user.password);
-    if(!isPasswordValid) throw new ResponseError(400, 'Invalid credentials');
+    if(!user || !(await bcrypt.compare(value.password, user.password))) throw new ResponseError(400, 'Invalid credentials');
 
-    const accessToken = jwt.sign({userId: user._id}, process.env.ACCESS_TOKEN_SECRET, {
-      expiresIn: '15m'
-    });
-    const refreshToken = jwt.sign({UserId: user._id}, process.env.REFRESH_TOKEN_SECRET, {
-      expiresIn: '1d'
-    });
+    const accessToken = generateAccessToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
 
-    await RefreshToken.create({
-      token: refreshToken,
-      expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      user: user._id
-    });
-
-    return res.status(200)
+    user.refreshToken = refreshToken;
+    await user.save();
+    
+    res.status(200)
       .cookie('accessToken', accessToken, {
         httpOnly: true,
-        maxAge: 15 * 60 * 1000
+        maxAge: 15 * 1000
       })
       .cookie('refreshToken', refreshToken, {
         httpOnly: true,
@@ -194,7 +205,6 @@ const login = async (req, res, next) => {
       })
       .json({
         data: user,
-        accessToken: accessToken,
         message: 'Login successfully'
       });
   } catch(err) {
@@ -204,23 +214,27 @@ const login = async (req, res, next) => {
 
 const logout = async (req, res, next) => {
   try {
-    const accessToken = req.cookies.accessToken;
+    const {accessToken} = req.cookies;
+    
+    await User.findOneAndUpdate({
+      _id: req.user.userId
+    }, {
+      refreshToken: null
+    });
 
-    await RefreshToken.deleteMany({user: req.user.userId});
     await Blacklist.create({token: accessToken});
 
-    return res.status(200)
+    res.status(200)
       .clearCookie('accessToken')
       .clearCookie('refreshToken')
-      .json({
-        message: 'Logout successfully'
-      });
+      .json({message: 'Logout successfully'});
   } catch(err) {
     next(err);
   }
 }
 
 export {
+  refreshToken,
   forgotPassword,
   resetPassword,
   emailVerification,

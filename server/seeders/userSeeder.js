@@ -15,6 +15,7 @@ const userSeeder = async () => {
         phone: '08945237890',
         address: 'Kota Jember',
         role: 'admin',
+        isVerified: true
       },
       {
         firstname: 'aditya',
@@ -24,6 +25,7 @@ const userSeeder = async () => {
         phone: '08994567890',
         address: 'Kota Kediri',
         role: 'user',
+        isVerified: true
       },
       {
         firstname: 'nova',
@@ -33,6 +35,7 @@ const userSeeder = async () => {
         phone: '08534567890',
         address: 'Kota Nganjuk',
         role: 'user',
+        isVerified: true
       }
     ]);
   } catch(err) {
