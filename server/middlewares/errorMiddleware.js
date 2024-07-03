@@ -11,12 +11,9 @@ const errorMiddleware = (err, req, res, next) => {
   if(err instanceof ResponseError && !isBadRequest) {
     logger.error(err);
     res.status(err.status).json({error: err.message});
-  } else if(isJwtValid) {
+  } else if(isJwtValid || isJwtExpired) {
     logger.error(err);
-    res.status(401).json({error: 'Invalid token'})
-  } else if(isJwtExpired) {
-    logger.error(err);
-    res.status(401).json({error: 'Token expired'});
+    res.status(401).json({error: 'Unauthorized access'});
   } else if(isBadRequest) {
     try {
       error = JSON.parse(err.message);

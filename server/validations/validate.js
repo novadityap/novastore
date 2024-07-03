@@ -15,7 +15,7 @@ const validate = (schema, body, files = null) => {
 
   if(files !== null) if(files.length === 0) error.push({images: 'Images is required'});
 
-  if (error.length > 0) throw new ResponseError(400, JSON.stringify(error));
+  if(error.length > 0) throw new ResponseError(400, JSON.stringify(error));
 
   return result.value
 }
