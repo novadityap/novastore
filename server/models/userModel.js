@@ -40,10 +40,6 @@ const userSchema = new mongoose.Schema({
       ref: 'Product'
     }
   ],
-  isBlocked: {
-    type: Boolean,
-    default: false
-  },
   isVerified: {
     type: Boolean,
     default: false
@@ -59,6 +55,9 @@ const userSchema = new mongoose.Schema({
   },
   resetPasswordTokenExpires: {
     type: Date,
+  },
+  refreshToken: {
+    type: String
   }
 }, { 
   timestamps: true, 
@@ -71,6 +70,7 @@ userSchema.methods.toJSON = function () {
   delete user.verificationTokenExpires;
   delete user.resetPasswordToken;
   delete user.resetPasswordTokenExpires;
+  delete user.refreshToken;
   delete user.createdAt;
   delete user.updatedAt;
   return user;
